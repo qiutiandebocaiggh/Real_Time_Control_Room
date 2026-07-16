@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.extensions import db
 
+
+def utc_now() -> datetime:
+    """Return the current timezone-aware UTC datetime."""
+    return datetime.now(UTC)
 
 class Instrument(db.Model):
     __tablename__ = "instruments"
@@ -252,12 +256,11 @@ class IngestionStatus(db.Model):
         db.Text,
         nullable=True,
     )
-
     updated_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utc_now,
+        onupdate=utc_now,
     )
 
     def as_dict(self) -> dict:

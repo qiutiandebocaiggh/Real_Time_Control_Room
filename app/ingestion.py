@@ -4,7 +4,7 @@ import json
 import logging
 import socket
 import time
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.exc import IntegrityError
