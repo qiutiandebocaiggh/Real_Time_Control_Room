@@ -4,7 +4,7 @@ import json
 import logging
 import socket
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.exc import IntegrityError
@@ -330,9 +330,12 @@ def process_line(line: str) -> str:
     raw_json = line.strip()
 
     if not raw_json:
-        raise EventValidationError(
-            "Received an empty stream message"
-        )
+        error_message = "Received an empty stream message"
+
+        record_invalid_message(error_message)
+        logger.warning(error_message)
+
+        return "invalid"
 
     try:
         decoded = json.loads(raw_json)

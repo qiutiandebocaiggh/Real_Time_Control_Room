@@ -37,7 +37,7 @@ class Config:
     STREAM_PORT = int(os.getenv("STREAM_PORT", "1337"))
     STREAM_RECONNECT_SECONDS = float(
         os.getenv("STREAM_RECONNECT_SECONDS", "3")
-)
+    )
 
     FLASK_HOST = os.getenv("FLASK_HOST", "127.0.0.1")
     FLASK_PORT = int(os.getenv("FLASK_PORT", "5001"))

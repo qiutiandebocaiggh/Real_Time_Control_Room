@@ -1,30 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
     <title>Real-Time Operations Control Room</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+
     <style>
         body {
-            font-family: Arial, sans-serif;
             margin: 20px;
             background: #fafafa;
+            font-family: Arial, sans-serif;
         }
 
         h1 {
             margin-bottom: 5px;
         }
 
+        h2 {
+            margin-top: 0;
+        }
+
         .subtitle {
-            color: #666;
             margin-bottom: 20px;
+            color: #666;
         }
 
         .box {
-            background: white;
+            margin-bottom: 20px;
+            padding: 15px;
             border: 1px solid #ddd;
             border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 20px;
+            background: white;
+        }
+
+        .small {
+            margin-bottom: 12px;
+            color: #666;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .instrument-id {
+            display: block;
+            margin-top: 2px;
+            color: #7a7f87;
+            font-size: 0.75rem;
+            font-weight: 400;
+        }
+
+        .error-message {
+            display: none;
+            margin-top: 10px;
+            color: #a61b1b;
+            font-size: 12px;
         }
 
         table {
@@ -33,9 +67,10 @@
             font-size: 13px;
         }
 
-        th, td {
-            border-bottom: 1px solid #ddd;
+        th,
+        td {
             padding: 6px;
+            border-bottom: 1px solid #ddd;
             text-align: left;
         }
 
@@ -43,29 +78,39 @@
             background: #f1f1f1;
         }
 
-        .small {
-            font-size: 12px;
-            color: #666;
+        tbody tr:hover {
+            background: #fafafa;
         }
     </style>
 </head>
-<body>
+
+<body data-refresh-ms="{{ refresh_ms }}">
     <h1>Real-Time Operations Control Room</h1>
+
     <div class="subtitle">
         Live event ingestion, operational monitoring and data-quality visibility.
     </div>
 
     <div class="box">
         <h2>Net traded cash flow — EUR</h2>
+
         <div class="small">
-            Simplified cumulative PnL based on VCR trades only.
-            This is an operational cash-flow indicator, not accounting PnL.
+            Cumulative signed notional for EUR-denominated trades.
+            BUY activity reduces net cash flow and SELL activity increases it.
+            This is an operational flow indicator, not accounting P&amp;L.
         </div>
-        <canvas id="pnlChart"></canvas>
+
+        <canvas id="cashFlowChart"></canvas>
+
+        <div
+            id="cashFlowError"
+            class="error-message"
+        ></div>
     </div>
 
     <div class="box">
         <h2>Latest Trades</h2>
+
         <table>
             <thead>
                 <tr>
@@ -78,49 +123,82 @@
                     <th>Notional</th>
                 </tr>
             </thead>
+
             <tbody id="tradesTable"></tbody>
         </table>
+
+        <div
+            id="tradesError"
+            class="error-message"
+        ></div>
     </div>
 
     <div class="box">
         <h2>Latest Prices</h2>
+
         <table>
             <thead>
                 <tr>
                     <th>Time</th>
                     <th>Instrument</th>
                     <th>Price</th>
+                    <th>Currency</th>
                 </tr>
             </thead>
+
             <tbody id="pricesTable"></tbody>
         </table>
+
+        <div
+            id="pricesError"
+            class="error-message"
+        ></div>
     </div>
 
     <script>
-        const chartContext = document.getElementById("pnlChart");
+        const cashFlowChartElement =
+            document.getElementById("cashFlowChart");
 
-        const pnlChart = new Chart(chartContext, {
-            type: "line",
-            data: {
-                labels: [],
-                datasets: [{
-                    label: "Net traded cash flow (EUR)",
-                    data: []
-                }]
-            },
-            options: {
-                responsive: true,
-                animation: false,
-                scales: {
-                    x: {
-                        ticks: {
-                            maxTicksLimit: 8
+        const cashFlowChart = new Chart(
+            cashFlowChartElement,
+            {
+                type: "line",
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: "Net traded cash flow (EUR)",
+                            data: [],
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            tension: 0.15
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    animation: false,
+                    interaction: {
+                        intersect: false,
+                        mode: "index"
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                callback(value) {
+                                    return Number(value).toLocaleString();
+                                }
+                            }
                         }
                     }
                 }
             }
-        });
-
+        );
 
         function shortTime(value) {
             if (!value) {
@@ -129,70 +207,211 @@
 
             const timestamp = new Date(value);
 
-            return timestamp.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit"
-            });
+            if (Number.isNaN(timestamp.getTime())) {
+                return value;
+            }
+
+            return timestamp.toLocaleTimeString(
+                [],
+                {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit"
+                }
+            );
         }
 
-        async function updatePnl() {
-            const response = await fetch("/api/pnl");
-            const data = await response.json();
+        function formatNumber(value, decimals = 0) {
+            const number = Number(value);
 
-            pnlChart.data.labels = data.map(row => shortTime(row.time));
-            pnlChart.data.datasets[0].data = data.map(row => row.net_cash_flow);
-            pnlChart.update();
+            if (!Number.isFinite(number)) {
+                return "";
+            }
+
+            return number.toLocaleString(
+                undefined,
+                {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }
+            );
+        }
+
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+
+            element.textContent = message;
+            element.style.display = "block";
+        }
+
+        function clearError(elementId) {
+            const element = document.getElementById(elementId);
+
+            element.textContent = "";
+            element.style.display = "none";
+        }
+
+        async function fetchJson(url) {
+            const response = await fetch(
+                url,
+                {
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `Request failed with status ${response.status}`
+                );
+            }
+
+            return response.json();
+        }
+
+        async function updateCashFlow() {
+            try {
+                const data = await fetchJson(
+                    "/api/cash-flow?currency=EUR"
+                );
+
+                cashFlowChart.data.labels = data.map(
+                    row => shortTime(row.time)
+                );
+
+                cashFlowChart.data.datasets[0].data = data.map(
+                    row => row.net_cash_flow
+                );
+
+                cashFlowChart.update();
+
+                clearError("cashFlowError");
+            } catch (error) {
+                console.error(
+                    "Unable to refresh cash-flow chart:",
+                    error
+                );
+
+                showError(
+                    "cashFlowError",
+                    "Cash-flow data is temporarily unavailable."
+                );
+            }
         }
 
         async function updateTrades() {
-            const response = await fetch("/api/cash-flow?currency=EUR");
-            const data = await response.json();
+            try {
+                const data = await fetchJson(
+                    "/api/trades/latest?limit=20"
+                );
 
-            const table = document.getElementById("tradesTable");
-            table.innerHTML = "";
+                const table =
+                    document.getElementById("tradesTable");
 
-            data.slice(0, 20).forEach(row => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${shortTime(row.event_time)}</td>
-                    <td>${row.instrument_id}</td>
-                    <td>${row.side}</td>
-                    <td>${Number(row.price).toFixed(4)}</td>
-                    <td>${row.volume}</td>
-                    <td>${row.currency}</td>
-                    <td>${Math.round(row.notional).toLocaleString()}</td>
-                `;
-                table.appendChild(tr);
-            });
+                table.innerHTML = "";
+
+                data.forEach(row => {
+                    const tr = document.createElement("tr");
+
+                    tr.innerHTML = `
+                        <td>${shortTime(row.event_time)}</td>
+                        <td>
+                            <strong>
+                                ${row.short_name || row.instrument_id}
+                            </strong>
+                            <span class="instrument-id">
+                                ${row.instrument_id}
+                            </span>
+                        </td>
+                        <td>${row.side}</td>
+                        <td>${formatNumber(row.price, 4)}</td>
+                        <td>${formatNumber(row.volume)}</td>
+                        <td>${row.currency}</td>
+                        <td>${formatNumber(row.notional)}</td>
+                    `;
+
+                    table.appendChild(tr);
+                });
+
+                clearError("tradesError");
+            } catch (error) {
+                console.error(
+                    "Unable to refresh trades:",
+                    error
+                );
+
+                showError(
+                    "tradesError",
+                    "Latest trade data is temporarily unavailable."
+                );
+            }
         }
 
         async function updatePrices() {
-            const response = await fetch("/api/prices/latest");
-            const data = await response.json();
+            try {
+                const data = await fetchJson(
+                    "/api/prices/latest?limit=20"
+                );
 
-            const table = document.getElementById("pricesTable");
-            table.innerHTML = "";
+                const table =
+                    document.getElementById("pricesTable");
 
-            data.slice(0, 20).forEach(row => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${shortTime(row.event_time)}</td>
-                    <td>${row.short_name || row.instrument_id}</td>
-                    <td>${Number(row.price).toFixed(4)}</td>
-                `;
-                table.appendChild(tr);
-            });
+                table.innerHTML = "";
+
+                data.forEach(row => {
+                    const tr = document.createElement("tr");
+
+                    tr.innerHTML = `
+                        <td>${shortTime(row.event_time)}</td>
+                        <td>
+                            <strong>
+                                ${row.short_name || row.instrument_id}
+                            </strong>
+                            <span class="instrument-id">
+                                ${row.instrument_id}
+                            </span>
+                        </td>
+                        <td>${formatNumber(row.price, 4)}</td>
+                        <td>${row.currency || ""}</td>
+                    `;
+
+                    table.appendChild(tr);
+                });
+
+                clearError("pricesError");
+            } catch (error) {
+                console.error(
+                    "Unable to refresh prices:",
+                    error
+                );
+
+                showError(
+                    "pricesError",
+                    "Latest price data is temporarily unavailable."
+                );
+            }
         }
 
         async function updateAll() {
-            await updatePnl();
-            await updateTrades();
-            await updatePrices();
+            await Promise.allSettled(
+                [
+                    updateCashFlow(),
+                    updateTrades(),
+                    updatePrices()
+                ]
+            );
         }
 
+        const refreshMs =
+            Number(document.body.dataset.refreshMs) || 2000;
+
         updateAll();
-        setInterval(updateAll, 2000);
+
+        setInterval(
+            updateAll,
+            refreshMs
+        );
     </script>
 </body>
 </html>
