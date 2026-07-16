@@ -5,6 +5,8 @@ A real-time data engineering and operational monitoring application built with *
 The system receives newline-delimited JSON events over TCP, validates and enriches them, rejects duplicate or invalid records, persists accepted events, exposes operational APIs, and refreshes a browser dashboard every two seconds.
 
 This portfolio project demonstrates an end-to-end workflow covering stream ingestion, data modelling, data-quality controls, process separation, operational state management, API development, and live visualisation.
+![Uploading image.png…]()
+
 
 ## Architecture
 
