@@ -1,0 +1,9 @@
+instrument_id,long_name,short_name,country,sector,industry,exchange,type,currency
+inst-001,Northstar Robotics,NSTR,Netherlands,Technology,Industrial Robotics,AMS,equity,EUR
+inst-002,Helios Energy Systems,HLIO,Germany,Energy,Renewable Infrastructure,FRA,equity,EUR
+inst-003,Atlas Maritime Logistics,ATLS,Netherlands,Industrials,Marine Logistics,AMS,equity,EUR
+inst-004,Vertex Cloud Systems,VRTX,Ireland,Technology,Cloud Infrastructure,DUB,equity,EUR
+inst-005,Orion Aerospace Components,ORAC,France,Industrials,Aerospace Manufacturing,PAR,equity,EUR
+inst-006,Meridian Medical Devices,MRDN,Switzerland,Healthcare,Medical Technology,ZRH,equity,CHF
+inst-007,Evergreen Mobility,EVGM,Sweden,Consumer,Electric Mobility,STO,equity,SEK
+inst-008,Quantum Materials Group,QMAT,United Kingdom,Materials,Advanced Materials,LSE,equity,GBP
