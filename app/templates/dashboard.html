@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KALK Control Room</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #fafafa;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .box {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            border-bottom: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+        }
+
+        th {
+            background: #f1f1f1;
+        }
+
+        .small {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>KALK Control Room</h1>
+    <div class="subtitle">
+        Real-time monitoring dashboard for trades, prices and VCR-denominated PnL.
+    </div>
+
+    <div class="box">
+        <h2>PnL over time (€)</h2>
+        <div class="small">
+            Simplified cumulative PnL based on VCR trades only.
+        </div>
+        <canvas id="pnlChart"></canvas>
+    </div>
+
+    <div class="box">
+        <h2>Latest Trades</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Instrument</th>
+                    <th>Side</th>
+                    <th>Price</th>
+                    <th>Volume</th>
+                    <th>Currency</th>
+                    <th>Notional</th>
+                </tr>
+            </thead>
+            <tbody id="tradesTable"></tbody>
+        </table>
+    </div>
+
+    <div class="box">
+        <h2>Latest Prices</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Instrument</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody id="pricesTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const chartContext = document.getElementById("pnlChart");
+
+        const pnlChart = new Chart(chartContext, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [{
+                    label: "Cumulative PnL (€)",
+                    data: []
+                }]
+            },
+            options: {
+                responsive: true,
+                animation: false,
+                scales: {
+                    x: {
+                        ticks: {
+                            maxTicksLimit: 8
+                        }
+                    }
+                }
+            }
+        });
+
+        function shortTime(value) {
+            if (!value) {
+                return "";
+            }
+            return value.replace("2025-01-06T", "");
+        }
+
+        async function updatePnl() {
+            const response = await fetch("/api/pnl");
+            const data = await response.json();
+
+            pnlChart.data.labels = data.map(row => shortTime(row.time));
+            pnlChart.data.datasets[0].data = data.map(row => row.pnl);
+            pnlChart.update();
+        }
+
+        async function updateTrades() {
+            const response = await fetch("/api/trades/latest");
+            const data = await response.json();
+
+            const table = document.getElementById("tradesTable");
+            table.innerHTML = "";
+
+            data.slice(0, 20).forEach(row => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${shortTime(row.event_time)}</td>
+                    <td>${row.instrument_id}</td>
+                    <td>${row.side}</td>
+                    <td>${Number(row.price).toFixed(4)}</td>
+                    <td>${row.volume}</td>
+                    <td>${row.currency}</td>
+                    <td>${Math.round(row.notional).toLocaleString()}</td>
+                `;
+                table.appendChild(tr);
+            });
+        }
+
+        async function updatePrices() {
+            const response = await fetch("/api/prices/latest");
+            const data = await response.json();
+
+            const table = document.getElementById("pricesTable");
+            table.innerHTML = "";
+
+            data.slice(0, 20).forEach(row => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${shortTime(row.event_time)}</td>
+                    <td>${row.instrument_id}</td>
+                    <td>${Number(row.price).toFixed(4)}</td>
+                `;
+                table.appendChild(tr);
+            });
+        }
+
+        async function updateAll() {
+            await updatePnl();
+            await updateTrades();
+            await updatePrices();
+        }
+
+        updateAll();
+        setInterval(updateAll, 2000);
+    </script>
+</body>
+</html>

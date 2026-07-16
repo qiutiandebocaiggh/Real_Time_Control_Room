@@ -1,0 +1,35 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment
+.env
+
+# Operating system
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Runtime
+*.log
+
+# Local data and database files
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Build output
+build/
+dist/
+*.egg-info/
