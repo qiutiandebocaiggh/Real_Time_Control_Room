@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>KALK Control Room</title>
+    <title>Real-Time Operations Control Room</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -50,15 +50,16 @@
     </style>
 </head>
 <body>
-    <h1>KALK Control Room</h1>
+    <h1>Real-Time Operations Control Room</h1>
     <div class="subtitle">
-        Real-time monitoring dashboard for trades, prices and VCR-denominated PnL.
+        Live event ingestion, operational monitoring and data-quality visibility.
     </div>
 
     <div class="box">
-        <h2>PnL over time (€)</h2>
+        <h2>Net traded cash flow — EUR</h2>
         <div class="small">
             Simplified cumulative PnL based on VCR trades only.
+            This is an operational cash-flow indicator, not accounting PnL.
         </div>
         <canvas id="pnlChart"></canvas>
     </div>
@@ -103,7 +104,7 @@
             data: {
                 labels: [],
                 datasets: [{
-                    label: "Cumulative PnL (€)",
+                    label: "Net traded cash flow (EUR)",
                     data: []
                 }]
             },
@@ -120,11 +121,19 @@
             }
         });
 
+
         function shortTime(value) {
             if (!value) {
                 return "";
             }
-            return value.replace("2025-01-06T", "");
+
+            const timestamp = new Date(value);
+
+            return timestamp.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            });
         }
 
         async function updatePnl() {
@@ -132,12 +141,12 @@
             const data = await response.json();
 
             pnlChart.data.labels = data.map(row => shortTime(row.time));
-            pnlChart.data.datasets[0].data = data.map(row => row.pnl);
+            pnlChart.data.datasets[0].data = data.map(row => row.net_cash_flow);
             pnlChart.update();
         }
 
         async function updateTrades() {
-            const response = await fetch("/api/trades/latest");
+            const response = await fetch("/api/cash-flow?currency=EUR");
             const data = await response.json();
 
             const table = document.getElementById("tradesTable");
@@ -169,7 +178,7 @@
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td>${shortTime(row.event_time)}</td>
-                    <td>${row.instrument_id}</td>
+                    <td>${row.short_name || row.instrument_id}</td>
                     <td>${Number(row.price).toFixed(4)}</td>
                 `;
                 table.appendChild(tr);

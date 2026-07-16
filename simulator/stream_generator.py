@@ -8,7 +8,7 @@ import socket
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TextIO
 
@@ -46,7 +46,7 @@ def load_instruments(path: Path) -> list[Instrument]:
 
 def iso_timestamp() -> str:
     """Return an ISO-8601 UTC timestamp."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def generate_price(
