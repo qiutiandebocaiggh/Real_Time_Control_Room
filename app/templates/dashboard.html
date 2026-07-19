@@ -6,209 +6,752 @@
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-
     <title>Real-Time Operations Control Room</title>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-
     <style>
+        :root {
+            --ink: #13213a;
+            --muted: #64748b;
+            --surface: #ffffff;
+            --canvas: #f3f6fb;
+            --line: #e5eaf1;
+            --blue: #2363eb;
+            --blue-soft: #e9f0ff;
+            --green: #168667;
+            --green-soft: #e8f7f1;
+            --amber: #b56a00;
+            --amber-soft: #fff4df;
+            --red: #c33c4b;
+            --red-soft: #feecef;
+            --shadow: 0 12px 35px rgba(34, 58, 104, 0.07);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            margin: 20px;
-            background: #fafafa;
-            font-family: Arial, sans-serif;
+            min-width: 320px;
+            margin: 0;
+            background: var(--canvas);
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
-        h1 {
-            margin-bottom: 5px;
+        .dashboard-shell {
+            width: min(1440px, calc(100% - 48px));
+            margin: 0 auto;
+            padding: 30px 0 44px;
         }
 
-        h2 {
+        .topbar {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 28px;
+            margin-bottom: 28px;
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            color: var(--blue);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        p {
             margin-top: 0;
         }
 
+        h1 {
+            margin-bottom: 9px;
+            font-size: clamp(1.65rem, 3vw, 2.35rem);
+            letter-spacing: -0.045em;
+            line-height: 1.08;
+        }
+
+        h2 {
+            margin-bottom: 5px;
+            font-size: 1rem;
+            letter-spacing: -0.02em;
+        }
+
         .subtitle {
-            margin-bottom: 20px;
-            color: #666;
+            max-width: 720px;
+            margin-bottom: 0;
+            color: var(--muted);
+            font-size: 0.94rem;
+            line-height: 1.55;
         }
 
-        .box {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            background: white;
+        .topbar-meta {
+            display: flex;
+            align-items: flex-end;
+            flex-direction: column;
+            gap: 9px;
+            flex-shrink: 0;
         }
 
-        .small {
-            margin-bottom: 12px;
-            color: #666;
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-        .instrument-id {
-            display: block;
-            margin-top: 2px;
-            color: #7a7f87;
+        .status-chip,
+        .label-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            width: fit-content;
+            border-radius: 999px;
             font-size: 0.75rem;
-            font-weight: 400;
+            font-weight: 750;
         }
 
-        .error-message {
-            display: none;
-            margin-top: 10px;
-            color: #a61b1b;
-            font-size: 12px;
+        .status-chip {
+            padding: 8px 11px;
+            background: var(--blue-soft);
+            color: #174ab8;
+        }
+
+        .status-chip[data-tone="success"] {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .status-chip[data-tone="warning"] {
+            background: var(--amber-soft);
+            color: var(--amber);
+        }
+
+        .status-chip[data-tone="danger"] {
+            background: var(--red-soft);
+            color: var(--red);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 0 3px currentColor;
+            opacity: 0.24;
+        }
+
+        .refresh-note {
+            color: var(--muted);
+            font-size: 0.73rem;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .metric-card,
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+
+        .metric-card {
+            position: relative;
+            min-height: 142px;
+            padding: 18px;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 3px;
+            background: var(--blue);
+            content: "";
+        }
+
+        .metric-card[data-tone="success"]::before {
+            background: var(--green);
+        }
+
+        .metric-card[data-tone="warning"]::before {
+            background: var(--amber);
+        }
+
+        .metric-card[data-tone="danger"]::before {
+            background: var(--red);
+        }
+
+        .metric-label {
+            margin-bottom: 15px;
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            margin-bottom: 8px;
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+
+        .metric-detail {
+            color: var(--muted);
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+
+        .content-grid,
+        .activity-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .content-grid {
+            grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.85fr);
+            margin-bottom: 16px;
+        }
+
+        .activity-grid {
+            grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.85fr);
+        }
+
+        .panel {
+            padding: 20px;
+        }
+
+        .panel-heading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .panel-description {
+            margin-bottom: 0;
+            color: var(--muted);
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+
+        .label-chip {
+            padding: 6px 9px;
+            background: #f1f4f9;
+            color: #506076;
+            white-space: nowrap;
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: 290px;
+        }
+
+        .attention-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .attention-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .attention-item {
+            padding: 13px;
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--blue);
+            border-radius: 9px;
+            background: #fbfcff;
+        }
+
+        .attention-item[data-tone="success"] {
+            border-left-color: var(--green);
+            background: #fbfefc;
+        }
+
+        .attention-item[data-tone="warning"] {
+            border-left-color: var(--amber);
+            background: #fffdf8;
+        }
+
+        .attention-item[data-tone="danger"] {
+            border-left-color: var(--red);
+            background: #fffafb;
+        }
+
+        .attention-title {
+            margin-bottom: 4px;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+
+        .attention-detail {
+            color: var(--muted);
+            font-size: 0.75rem;
+            line-height: 1.45;
+        }
+
+        .attention-footnote {
+            margin: auto 0 0;
+            padding-top: 18px;
+            color: var(--muted);
+            font-size: 0.72rem;
+            line-height: 1.45;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 0.8rem;
         }
 
         th,
         td {
-            padding: 6px;
-            border-bottom: 1px solid #ddd;
+            padding: 11px 10px;
+            border-bottom: 1px solid var(--line);
             text-align: left;
+            white-space: nowrap;
         }
 
         th {
-            background: #f1f1f1;
+            color: #7b8799;
+            font-size: 0.67rem;
+            font-weight: 800;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
         }
 
         tbody tr:hover {
-            background: #fafafa;
+            background: #fafcff;
+        }
+
+        .instrument-name {
+            display: block;
+            color: var(--ink);
+            font-size: 0.8rem;
+            font-weight: 780;
+        }
+
+        .instrument-id,
+        .secondary-value {
+            display: block;
+            margin-top: 2px;
+            color: var(--muted);
+            font-size: 0.69rem;
+            font-weight: 500;
+        }
+
+        .number-cell {
+            text-align: right;
+        }
+
+        .number-cell strong {
+            font-weight: 750;
+        }
+
+        .side-badge {
+            display: inline-block;
+            min-width: 47px;
+            padding: 5px 7px;
+            border-radius: 6px;
+            background: var(--blue-soft);
+            color: #2457bf;
+            font-size: 0.67rem;
+            font-weight: 850;
+            letter-spacing: 0.04em;
+            text-align: center;
+        }
+
+        .side-badge--sell {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .table-empty {
+            padding: 30px;
+            color: var(--muted);
+            text-align: center;
+            white-space: normal;
+        }
+
+        .error-message {
+            display: none;
+            margin: 13px 0 0;
+            color: var(--red);
+            font-size: 0.75rem;
+        }
+
+        @media (max-width: 1020px) {
+            .overview-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .content-grid,
+            .activity-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .dashboard-shell {
+                width: min(100% - 28px, 1440px);
+                padding-top: 22px;
+            }
+
+            .topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .topbar-meta {
+                align-items: flex-start;
+            }
+
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .panel,
+            .metric-card {
+                padding: 16px;
+            }
+
+            .chart-wrap {
+                height: 240px;
+            }
         }
     </style>
 </head>
 
-<body data-refresh-ms="{{ refresh_ms }}">
-    <h1>Real-Time Operations Control Room</h1>
+<body
+    data-refresh-ms="{{ refresh_ms }}"
+    data-freshness-threshold-seconds="{{ freshness_threshold_seconds }}"
+>
+    <div class="dashboard-shell">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Operations control · synthetic live stream</p>
+                <h1>Real-Time Operations Control Room</h1>
+                <p class="subtitle">
+                    A live view of stream availability, data-quality controls,
+                    accepted events and EUR operational cash flow.
+                </p>
+            </div>
 
-    <div class="subtitle">
-        Live event ingestion, operational monitoring and data-quality visibility.
-    </div>
+            <div class="topbar-meta">
+                <div
+                    id="globalStatus"
+                    class="status-chip"
+                    data-tone="neutral"
+                >
+                    <span class="status-dot"></span>
+                    <span>Loading operational state</span>
+                </div>
+                <span id="lastRefresh" class="refresh-note">
+                    Dashboard has not refreshed yet
+                </span>
+            </div>
+        </header>
 
-    <div class="box">
-        <h2>Net traded cash flow — EUR</h2>
+        <main>
+            <section class="overview-grid" aria-label="Operational overview">
+                <article id="connectionCard" class="metric-card" data-tone="neutral">
+                    <div class="metric-label">Pipeline status</div>
+                    <div id="connectionValue" class="metric-value">—</div>
+                    <div id="connectionDetail" class="metric-detail">
+                        Reading the persisted stream state
+                    </div>
+                </article>
 
-        <div class="small">
-            Cumulative signed notional for EUR-denominated trades.
-            BUY activity reduces net cash flow and SELL activity increases it.
-            This is an operational flow indicator, not accounting P&amp;L.
-        </div>
+                <article id="freshnessCard" class="metric-card" data-tone="neutral">
+                    <div class="metric-label">Event freshness</div>
+                    <div id="freshnessValue" class="metric-value">—</div>
+                    <div id="freshnessDetail" class="metric-detail">
+                        Waiting for the most recent event
+                    </div>
+                </article>
 
-        <canvas id="cashFlowChart"></canvas>
+                <article id="volumeCard" class="metric-card" data-tone="neutral">
+                    <div class="metric-label">Accepted events</div>
+                    <div id="volumeValue" class="metric-value">—</div>
+                    <div id="volumeDetail" class="metric-detail">
+                        Trades and price updates persisted
+                    </div>
+                </article>
 
-        <div
-            id="cashFlowError"
-            class="error-message"
-        ></div>
-    </div>
+                <article id="exceptionCard" class="metric-card" data-tone="neutral">
+                    <div class="metric-label">Validation controls</div>
+                    <div id="exceptionValue" class="metric-value">—</div>
+                    <div id="exceptionDetail" class="metric-detail">
+                        Invalid and duplicate message handling
+                    </div>
+                </article>
+            </section>
 
-    <div class="box">
-        <h2>Latest Trades</h2>
+            <section class="content-grid">
+                <article class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>EUR operational cash flow</h2>
+                            <p class="panel-description">
+                                Cumulative signed notional for EUR-denominated
+                                trades. It is an operational flow indicator,
+                                not accounting P&amp;L.
+                            </p>
+                        </div>
+                        <span class="label-chip">EUR only</span>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="cashFlowChart"></canvas>
+                    </div>
+                    <p id="cashFlowError" class="error-message"></p>
+                </article>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Instrument</th>
-                    <th>Side</th>
-                    <th>Price</th>
-                    <th>Volume</th>
-                    <th>Currency</th>
-                    <th>Notional</th>
-                </tr>
-            </thead>
+                <aside class="panel attention-card" aria-live="polite">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>Operational attention</h2>
+                            <p class="panel-description">
+                                Control signals derived from the current ingestion state.
+                            </p>
+                        </div>
+                    </div>
+                    <div id="attentionList" class="attention-list">
+                        <div class="attention-item">
+                            <div class="attention-title">Awaiting status</div>
+                            <div class="attention-detail">
+                                The dashboard is requesting the latest control state.
+                            </div>
+                        </div>
+                    </div>
+                    <p class="attention-footnote">
+                        The ingestion worker persists connection state and event
+                        counters independently from the dashboard process.
+                    </p>
+                </aside>
+            </section>
 
-            <tbody id="tradesTable"></tbody>
-        </table>
+            <section class="activity-grid" aria-label="Latest operational activity">
+                <article class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>Latest trade activity</h2>
+                            <p class="panel-description">
+                                Most recently accepted trades, enriched with reference data.
+                            </p>
+                        </div>
+                        <span class="label-chip">Latest 8</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Instrument</th>
+                                    <th>Side</th>
+                                    <th class="number-cell">Price</th>
+                                    <th class="number-cell">Volume</th>
+                                    <th class="number-cell">Notional</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tradesTable"></tbody>
+                        </table>
+                    </div>
+                    <p id="tradesError" class="error-message"></p>
+                </article>
 
-        <div
-            id="tradesError"
-            class="error-message"
-        ></div>
-    </div>
-
-    <div class="box">
-        <h2>Latest Prices</h2>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Instrument</th>
-                    <th>Price</th>
-                    <th>Currency</th>
-                </tr>
-            </thead>
-
-            <tbody id="pricesTable"></tbody>
-        </table>
-
-        <div
-            id="pricesError"
-            class="error-message"
-        ></div>
+                <article class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>Latest price updates</h2>
+                            <p class="panel-description">
+                                Recent market-price messages accepted by the pipeline.
+                            </p>
+                        </div>
+                        <span class="label-chip">Latest 8</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Instrument</th>
+                                    <th class="number-cell">Price</th>
+                                    <th>Received</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pricesTable"></tbody>
+                        </table>
+                    </div>
+                    <p id="pricesError" class="error-message"></p>
+                </article>
+            </section>
+        </main>
     </div>
 
     <script>
-        const cashFlowChartElement =
-            document.getElementById("cashFlowChart");
+        const refreshMs =
+            Number(document.body.dataset.refreshMs) || 2000;
+        const freshnessThresholdSeconds =
+            Number(
+                document.body.dataset.freshnessThresholdSeconds
+            ) || 10;
+        const chartElement = document.getElementById("cashFlowChart");
+        let refreshInProgress = false;
 
-        const cashFlowChart = new Chart(
-            cashFlowChartElement,
-            {
-                type: "line",
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            label: "Net traded cash flow (EUR)",
-                            data: [],
-                            borderWidth: 2,
-                            pointRadius: 2,
-                            tension: 0.15
-                        }
-                    ]
+        const cashFlowChart = new Chart(chartElement, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: "Net traded cash flow (EUR)",
+                        data: [],
+                        borderColor: "#2363eb",
+                        backgroundColor: "rgba(35, 99, 235, 0.12)",
+                        borderWidth: 2.5,
+                        fill: true,
+                        pointBackgroundColor: "#ffffff",
+                        pointBorderColor: "#2363eb",
+                        pointBorderWidth: 1.5,
+                        pointRadius: 2,
+                        pointHoverRadius: 4,
+                        tension: 0.24
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: {
+                    intersect: false,
+                    mode: "index"
                 },
-                options: {
-                    responsive: true,
-                    animation: false,
-                    interaction: {
-                        intersect: false,
-                        mode: "index"
+                plugins: {
+                    legend: {
+                        display: false
                     },
-                    scales: {
-                        x: {
-                            ticks: {
-                                maxTicksLimit: 8
+                    tooltip: {
+                        backgroundColor: "#13213a",
+                        padding: 10,
+                        callbacks: {
+                            label(context) {
+                                return `Net flow: ${formatMoney(
+                                    context.parsed.y,
+                                    "EUR"
+                                )}`;
                             }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
                         },
-                        y: {
-                            ticks: {
-                                callback(value) {
-                                    return Number(value).toLocaleString();
-                                }
+                        ticks: {
+                            color: "#7b8799",
+                            maxTicksLimit: 7,
+                            maxRotation: 0
+                        }
+                    },
+                    y: {
+                        border: {
+                            display: false
+                        },
+                        grid: {
+                            color: "#edf1f6"
+                        },
+                        ticks: {
+                            color: "#7b8799",
+                            callback(value) {
+                                return formatCompactMoney(value);
                             }
                         }
                     }
                 }
             }
-        );
+        });
+
+        function formatNumber(value, decimals = 0) {
+            const number = Number(value);
+
+            if (!Number.isFinite(number)) {
+                return "—";
+            }
+
+            return number.toLocaleString(
+                undefined,
+                {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }
+            );
+        }
+
+        function formatMoney(value, currency, decimals = 0) {
+            const number = Number(value);
+
+            if (!Number.isFinite(number)) {
+                return "—";
+            }
+
+            return new Intl.NumberFormat(
+                undefined,
+                {
+                    style: "currency",
+                    currency,
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }
+            ).format(number);
+        }
+
+        function formatCompactMoney(value) {
+            const number = Number(value);
+
+            if (!Number.isFinite(number)) {
+                return "—";
+            }
+
+            return new Intl.NumberFormat(
+                undefined,
+                {
+                    style: "currency",
+                    currency: "EUR",
+                    notation: "compact",
+                    maximumFractionDigits: 1
+                }
+            ).format(number);
+        }
 
         function shortTime(value) {
             if (!value) {
-                return "";
+                return "—";
             }
 
             const timestamp = new Date(value);
 
             if (Number.isNaN(timestamp.getTime())) {
-                return value;
+                return "—";
             }
 
             return timestamp.toLocaleTimeString(
@@ -221,19 +764,48 @@
             );
         }
 
-        function formatNumber(value, decimals = 0) {
-            const number = Number(value);
-
-            if (!Number.isFinite(number)) {
-                return "";
+        function eventAgeSeconds(value) {
+            if (!value) {
+                return null;
             }
 
-            return number.toLocaleString(
-                undefined,
-                {
-                    minimumFractionDigits: decimals,
-                    maximumFractionDigits: decimals
-                }
+            const timestamp = new Date(value);
+
+            if (Number.isNaN(timestamp.getTime())) {
+                return null;
+            }
+
+            return Math.max(0, (Date.now() - timestamp.getTime()) / 1000);
+        }
+
+        function formatAge(seconds) {
+            if (seconds === null) {
+                return "No event";
+            }
+
+            if (seconds < 1) {
+                return "<1s";
+            }
+
+            if (seconds < 60) {
+                return `${Math.round(seconds)}s`;
+            }
+
+            return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "").replace(
+                /[&<>"']/g,
+                character => (
+                    {
+                        "&": "&amp;",
+                        "<": "&lt;",
+                        ">": "&gt;",
+                        '"': "&quot;",
+                        "'": "&#39;"
+                    }[character]
+                )
             );
         }
 
@@ -251,6 +823,224 @@
             element.style.display = "none";
         }
 
+        function setMetric(cardId, valueId, detailId, value, detail, tone) {
+            document.getElementById(cardId).dataset.tone = tone;
+            document.getElementById(valueId).textContent = value;
+            document.getElementById(detailId).textContent = detail;
+        }
+
+        function setGlobalStatus(label, tone) {
+            const element = document.getElementById("globalStatus");
+
+            element.dataset.tone = tone;
+            element.lastElementChild.textContent = label;
+        }
+
+        function renderAttention(items) {
+            const container = document.getElementById("attentionList");
+
+            container.innerHTML = items.map(
+                item => `
+                    <div class="attention-item" data-tone="${item.tone}">
+                        <div class="attention-title">
+                            ${escapeHtml(item.title)}
+                        </div>
+                        <div class="attention-detail">
+                            ${escapeHtml(item.detail)}
+                        </div>
+                    </div>
+                `
+            ).join("");
+        }
+
+        function connectionDescriptor(connectionStatus) {
+            const status = String(connectionStatus || "not_started").toLowerCase();
+
+            if (status === "connected") {
+                return {
+                    label: "LIVE",
+                    tone: "success",
+                    detail: "Ingestion worker is connected to the source stream"
+                };
+            }
+
+            if (status === "connecting") {
+                return {
+                    label: "CONNECTING",
+                    tone: "warning",
+                    detail: "Ingestion worker is establishing a stream connection"
+                };
+            }
+
+            if (status === "disconnected") {
+                return {
+                    label: "OFFLINE",
+                    tone: "danger",
+                    detail: "Source stream is unavailable; retry loop is active"
+                };
+            }
+
+            if (status === "stopped") {
+                return {
+                    label: "STOPPED",
+                    tone: "warning",
+                    detail: "Ingestion worker was stopped intentionally"
+                };
+            }
+
+            return {
+                label: "PENDING",
+                tone: "neutral",
+                detail: "Ingestion worker has not reported a connection yet"
+            };
+        }
+
+        function renderOperationalOverview(health) {
+            const ingestion = health.ingestion || {};
+            const connection = connectionDescriptor(
+                ingestion.connection_status
+            );
+            const freshness = eventAgeSeconds(ingestion.last_event_at);
+            const isFresh = freshness !== null
+                && freshness <= freshnessThresholdSeconds;
+            const freshnessTone = freshness === null
+                ? "neutral"
+                : (isFresh ? "success" : "warning");
+            const acceptedTrades = Number(ingestion.processed_trade_count) || 0;
+            const acceptedPrices = Number(ingestion.processed_price_count) || 0;
+            const acceptedEvents = acceptedTrades + acceptedPrices;
+            const duplicateCount = Number(ingestion.duplicate_trade_count) || 0;
+            const invalidCount = Number(ingestion.invalid_message_count) || 0;
+
+            setMetric(
+                "connectionCard",
+                "connectionValue",
+                "connectionDetail",
+                connection.label,
+                connection.detail,
+                connection.tone
+            );
+            setMetric(
+                "freshnessCard",
+                "freshnessValue",
+                "freshnessDetail",
+                formatAge(freshness),
+                freshness === null
+                    ? "No event has been persisted yet"
+                    : `Freshness target: within ${freshnessThresholdSeconds}s`,
+                freshnessTone
+            );
+            setMetric(
+                "volumeCard",
+                "volumeValue",
+                "volumeDetail",
+                formatNumber(acceptedEvents),
+                `${formatNumber(acceptedTrades)} trades · ${formatNumber(
+                    acceptedPrices
+                )} prices`,
+                acceptedEvents > 0 ? "success" : "neutral"
+            );
+            setMetric(
+                "exceptionCard",
+                "exceptionValue",
+                "exceptionDetail",
+                `${formatNumber(invalidCount)} invalid`,
+                `${formatNumber(duplicateCount)} duplicate trades safely rejected`,
+                invalidCount > 0 ? "danger" : "success"
+            );
+
+            const attentionItems = [];
+
+            if (connection.tone !== "success") {
+                attentionItems.push(
+                    {
+                        title: "Stream connection requires attention",
+                        detail: ingestion.last_error
+                            || connection.detail,
+                        tone: connection.tone === "danger"
+                            ? "danger"
+                            : "warning"
+                    }
+                );
+            }
+
+            if (freshness !== null && !isFresh) {
+                attentionItems.push(
+                    {
+                        title: "Latest event is outside the freshness target",
+                        detail: `Last persisted event was ${formatAge(
+                            freshness
+                        )} ago; target is within ${freshnessThresholdSeconds}s.`,
+                        tone: "warning"
+                    }
+                );
+            }
+
+            if (invalidCount > 0) {
+                attentionItems.push(
+                    {
+                        title: "Validation exceptions were rejected",
+                        detail: `${formatNumber(
+                            invalidCount
+                        )} message(s) failed the incoming-event contract.`,
+                        tone: "danger"
+                    }
+                );
+            }
+
+            if (!attentionItems.length) {
+                attentionItems.push(
+                    {
+                        title: "All core controls are operating normally",
+                        detail: "The stream is connected, the latest event is within target and no invalid messages are recorded.",
+                        tone: "success"
+                    }
+                );
+                attentionItems.push(
+                    {
+                        title: "Duplicate protection is active",
+                        detail: `${formatNumber(
+                            duplicateCount
+                        )} duplicate trade(s) have been counted without being stored twice.`,
+                        tone: "success"
+                    }
+                );
+            }
+
+            renderAttention(attentionItems);
+            setGlobalStatus(
+                connection.tone === "success" && isFresh
+                    ? "Control room is live"
+                    : "Control state needs review",
+                connection.tone === "success" && isFresh
+                    ? "success"
+                    : (connection.tone === "danger" ? "danger" : "warning")
+            );
+        }
+
+        function renderHealthUnavailable() {
+            setGlobalStatus("Control API is unavailable", "danger");
+            renderAttention(
+                [
+                    {
+                        title: "Operational status could not be refreshed",
+                        detail: "The dashboard could not retrieve its health endpoint. Other panels may still retain their last successful values.",
+                        tone: "danger"
+                    }
+                ]
+            );
+        }
+
+        function setEmptyTable(tableId, columnCount, message) {
+            document.getElementById(tableId).innerHTML = `
+                <tr>
+                    <td class="table-empty" colspan="${columnCount}">
+                        ${escapeHtml(message)}
+                    </td>
+                </tr>
+            `;
+        }
+
         async function fetchJson(url) {
             const response = await fetch(
                 url,
@@ -262,37 +1052,35 @@
             );
 
             if (!response.ok) {
-                throw new Error(
-                    `Request failed with status ${response.status}`
-                );
+                throw new Error(`Request failed with status ${response.status}`);
             }
 
             return response.json();
         }
 
+        async function updateOperationalOverview() {
+            try {
+                renderOperationalOverview(await fetchJson("/api/health"));
+            } catch (error) {
+                console.error("Unable to refresh operational overview:", error);
+                renderHealthUnavailable();
+            }
+        }
+
         async function updateCashFlow() {
             try {
-                const data = await fetchJson(
-                    "/api/cash-flow?currency=EUR"
-                );
+                const data = await fetchJson("/api/cash-flow?currency=EUR");
 
                 cashFlowChart.data.labels = data.map(
                     row => shortTime(row.time)
                 );
-
                 cashFlowChart.data.datasets[0].data = data.map(
                     row => row.net_cash_flow
                 );
-
                 cashFlowChart.update();
-
                 clearError("cashFlowError");
             } catch (error) {
-                console.error(
-                    "Unable to refresh cash-flow chart:",
-                    error
-                );
-
+                console.error("Unable to refresh cash-flow chart:", error);
                 showError(
                     "cashFlowError",
                     "Cash-flow data is temporarily unavailable."
@@ -302,45 +1090,62 @@
 
         async function updateTrades() {
             try {
-                const data = await fetchJson(
-                    "/api/trades/latest?limit=20"
-                );
+                const data = await fetchJson("/api/trades/latest?limit=8");
+                const table = document.getElementById("tradesTable");
 
-                const table =
-                    document.getElementById("tradesTable");
+                if (!data.length) {
+                    setEmptyTable(
+                        "tradesTable",
+                        6,
+                        "No accepted trade events yet."
+                    );
+                    clearError("tradesError");
+                    return;
+                }
 
-                table.innerHTML = "";
+                table.innerHTML = data.map(
+                    row => {
+                        const isSell = String(row.side).toUpperCase() === "SELL";
+                        const sideClass = isSell ? " side-badge--sell" : "";
 
-                data.forEach(row => {
-                    const tr = document.createElement("tr");
-
-                    tr.innerHTML = `
-                        <td>${shortTime(row.event_time)}</td>
-                        <td>
-                            <strong>
-                                ${row.short_name || row.instrument_id}
-                            </strong>
-                            <span class="instrument-id">
-                                ${row.instrument_id}
-                            </span>
-                        </td>
-                        <td>${row.side}</td>
-                        <td>${formatNumber(row.price, 4)}</td>
-                        <td>${formatNumber(row.volume)}</td>
-                        <td>${row.currency}</td>
-                        <td>${formatNumber(row.notional)}</td>
-                    `;
-
-                    table.appendChild(tr);
-                });
-
+                        return `
+                            <tr>
+                                <td>${escapeHtml(shortTime(row.event_time))}</td>
+                                <td>
+                                    <span class="instrument-name">
+                                        ${escapeHtml(
+                                            row.short_name || row.instrument_id
+                                        )}
+                                    </span>
+                                    <span class="instrument-id">
+                                        ${escapeHtml(row.instrument_id)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="side-badge${sideClass}">
+                                        ${escapeHtml(row.side)}
+                                    </span>
+                                </td>
+                                <td class="number-cell">
+                                    ${escapeHtml(formatNumber(row.price, 4))}
+                                </td>
+                                <td class="number-cell">
+                                    ${escapeHtml(formatNumber(row.volume))}
+                                </td>
+                                <td class="number-cell">
+                                    <strong>
+                                        ${escapeHtml(
+                                            formatMoney(row.notional, row.currency)
+                                        )}
+                                    </strong>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                ).join("");
                 clearError("tradesError");
             } catch (error) {
-                console.error(
-                    "Unable to refresh trades:",
-                    error
-                );
-
+                console.error("Unable to refresh trades:", error);
                 showError(
                     "tradesError",
                     "Latest trade data is temporarily unavailable."
@@ -350,42 +1155,47 @@
 
         async function updatePrices() {
             try {
-                const data = await fetchJson(
-                    "/api/prices/latest?limit=20"
-                );
+                const data = await fetchJson("/api/prices/latest?limit=8");
+                const table = document.getElementById("pricesTable");
 
-                const table =
-                    document.getElementById("pricesTable");
+                if (!data.length) {
+                    setEmptyTable(
+                        "pricesTable",
+                        3,
+                        "No accepted price updates yet."
+                    );
+                    clearError("pricesError");
+                    return;
+                }
 
-                table.innerHTML = "";
-
-                data.forEach(row => {
-                    const tr = document.createElement("tr");
-
-                    tr.innerHTML = `
-                        <td>${shortTime(row.event_time)}</td>
-                        <td>
-                            <strong>
-                                ${row.short_name || row.instrument_id}
-                            </strong>
-                            <span class="instrument-id">
-                                ${row.instrument_id}
-                            </span>
-                        </td>
-                        <td>${formatNumber(row.price, 4)}</td>
-                        <td>${row.currency || ""}</td>
-                    `;
-
-                    table.appendChild(tr);
-                });
-
+                table.innerHTML = data.map(
+                    row => `
+                        <tr>
+                            <td>
+                                <span class="instrument-name">
+                                    ${escapeHtml(
+                                        row.short_name || row.instrument_id
+                                    )}
+                                </span>
+                                <span class="instrument-id">
+                                    ${escapeHtml(row.instrument_id)}
+                                </span>
+                            </td>
+                            <td class="number-cell">
+                                <strong>
+                                    ${escapeHtml(formatNumber(row.price, 4))}
+                                </strong>
+                                <span class="secondary-value">
+                                    ${escapeHtml(row.currency || "")}
+                                </span>
+                            </td>
+                            <td>${escapeHtml(shortTime(row.event_time))}</td>
+                        </tr>
+                    `
+                ).join("");
                 clearError("pricesError");
             } catch (error) {
-                console.error(
-                    "Unable to refresh prices:",
-                    error
-                );
-
+                console.error("Unable to refresh prices:", error);
                 showError(
                     "pricesError",
                     "Latest price data is temporarily unavailable."
@@ -394,24 +1204,28 @@
         }
 
         async function updateAll() {
+            if (refreshInProgress) {
+                return;
+            }
+
+            refreshInProgress = true;
+
             await Promise.allSettled(
                 [
+                    updateOperationalOverview(),
                     updateCashFlow(),
                     updateTrades(),
                     updatePrices()
                 ]
             );
+
+            document.getElementById("lastRefresh").textContent =
+                `Last dashboard refresh: ${shortTime(new Date().toISOString())}`;
+            refreshInProgress = false;
         }
 
-        const refreshMs =
-            Number(document.body.dataset.refreshMs) || 2000;
-
         updateAll();
-
-        setInterval(
-            updateAll,
-            refreshMs
-        );
+        setInterval(updateAll, refreshMs);
     </script>
 </body>
 </html>
