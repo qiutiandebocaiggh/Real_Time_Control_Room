@@ -6,8 +6,48 @@ The system receives newline-delimited JSON events over TCP, validates and enrich
 
 This portfolio project demonstrates an end-to-end workflow covering stream ingestion, data modelling, data-quality controls, process separation, operational state management, API development, and live visualisation.
 
-![frontend_overview_1.png](app/templates/frontend_overview_1.png)
-![frontend_overview_2.png](app/templates/frontend_overview_2.png)
+## Dashboard preview
+
+The dashboard exposes operational state, data freshness, validation controls,
+accepted event volumes and EUR operational cash flow in one live view.
+
+![Operations dashboard overview](docs/screenshots/dashboard-overview.png)
+
+![Latest operational activity](docs/screenshots/latest-activity.png)
+
+## Representative live run
+
+The screenshots are point-in-time captures from a live synthetic stream, so
+cumulative event counts continue to increase between captures.
+
+| Metric | Captured result |
+|---|---:|
+| Connection status | `connected` |
+| Accepted events | 10,469 |
+| Processed trades | 6,307 |
+| Processed prices | 4,162 |
+| Duplicate trade events safely rejected | 348 |
+| Invalid messages | 0 |
+
+## Operational resilience evidence
+
+The ingestion worker persists operational state independently from the dashboard.
+During an intentional source interruption, it records a disconnected state,
+retries the TCP connection every three seconds, and reconnects automatically
+after the source restarts.
+
+| Disconnected state | Retry and automatic recovery |
+|---|---|
+| ![Disconnected ingestion status](docs/screenshots/health-disconnected.png) | ![Reconnect recovery log](docs/screenshots/reconnect-recovery.png) |
+
+<details>
+<summary>Full dashboard and connected health-check evidence</summary>
+
+![Full dashboard](docs/screenshots/dashboard-full.png)
+
+![Connected health endpoint](docs/screenshots/health-connected.png)
+
+</details>
 ## Architecture
 
 ```text

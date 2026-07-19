@@ -17,6 +17,9 @@ def dashboard():
     return render_template(
         "dashboard.html",
         refresh_ms=current_app.config["DASHBOARD_REFRESH_MS"],
+        freshness_threshold_seconds=current_app.config[
+            "DATA_FRESHNESS_THRESHOLD_SECONDS"
+        ],
     )
 
 
