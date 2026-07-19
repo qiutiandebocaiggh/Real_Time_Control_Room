@@ -6,8 +6,8 @@ The system receives newline-delimited JSON events over TCP, validates and enrich
 
 This portfolio project demonstrates an end-to-end workflow covering stream ingestion, data modelling, data-quality controls, process separation, operational state management, API development, and live visualisation.
 
-![frontend_overview.png](app/templates/frontend_overview.png)
-
+![frontend_overview_1.png](app/templates/frontend_overview_1.png)
+![frontend_overview_2.png](app/templates/frontend_overview_2.png)
 ## Architecture
 
 ```text
